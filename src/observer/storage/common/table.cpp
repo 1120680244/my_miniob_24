@@ -53,24 +53,24 @@ Table::~Table()
   LOG_INFO("Table has been closed: %s", name());
 }
 
-RC Table::create(
-    const char *path, const char *name, const char *base_dir, int attribute_count, const AttrInfo attributes[])
+// @brief：创建一个表
+RC Table::create(const char *path, const char *name, const char *base_dir, 
+                                   int attribute_count, const AttrInfo attributes[])
 {
-
-  if (common::is_blank(name)) {
+  if (common::is_blank(name)) {   // 合法性
     LOG_WARN("Name cannot be empty");
     return RC::INVALID_ARGUMENT;
   }
   LOG_INFO("Begin to create table %s:%s", base_dir, name);
 
-  if (attribute_count <= 0 || nullptr == attributes) {
+  if (attribute_count <= 0 || nullptr == attributes) { // 合法性
     LOG_WARN("Invalid arguments. table_name=%s, attribute_count=%d, attributes=%p", name, attribute_count, attributes);
     return RC::INVALID_ARGUMENT;
   }
 
   RC rc = RC::SUCCESS;
 
-  // 使用 table_name.table记录一个表的元数据
+  // 在table_name.table（路径是path）记录该表的元数据
   // 判断表文件是否已经存在
   int fd = ::open(path, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC, 0600);
   if (fd < 0) {
@@ -81,34 +81,37 @@ RC Table::create(
     LOG_ERROR("Create table file failed. filename=%s, errmsg=%d:%s", path, errno, strerror(errno));
     return RC::IOERR;
   }
-
   close(fd);
 
   // 创建文件
+                                /* 处理meta文件 */
+  // table_meta_.init()：初始化字段元数据，形成TableMeta table_meta_
   if ((rc = table_meta_.init(name, attribute_count, attributes)) != RC::SUCCESS) {
     LOG_ERROR("Failed to init table meta. name:%s, ret:%d", name, rc);
     return rc;  // delete table file
   }
 
   std::fstream fs;
-  fs.open(path, std::ios_base::out | std::ios_base::binary);
+  fs.open(path, std::ios_base::out | std::ios_base::binary);//打开meta相应的文件（path）
   if (!fs.is_open()) {
     LOG_ERROR("Failed to open file for write. file name=%s, errmsg=%s", path, strerror(errno));
     return RC::IOERR;
   }
 
-  // 记录元数据到文件中
+  // 记录元数据table_meta_到文件中
+  //（以fs文件流的形式：fs.open开启了文件入口，然后table_meta_写入）
   table_meta_.serialize(fs);
-  fs.close();
+  fs.close(); // fs被写完后，close!
 
-  std::string data_file = table_data_file(base_dir, name);
+                                /* 处理data文件 */
+  std::string data_file = table_data_file(base_dir, name); // 拼接名字
   data_buffer_pool_ = theGlobalDiskBufferPool();
-  rc = data_buffer_pool_->create_file(data_file.c_str());
+  rc = data_buffer_pool_->create_file(data_file.c_str()); // 创建data文件
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to create disk buffer pool of data file. file name=%s", data_file.c_str());
     return rc;
   }
-
+                 /* Table的record需要被管理，初始化record_handler */
   rc = init_record_handler(base_dir);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to create table %s due to init record handler failed.", data_file.c_str());
@@ -121,20 +124,37 @@ RC Table::create(
   return rc;
 }
 
+// destroy(): 销毁一个表（table层次上的，应该是软件上最底下这层），涉及：
+//      .table文件和.data文件
+//      table对应的索引文件
+//      DiskBufferPool中的相关资源
 RC Table::destroy(const char* dir) {
   //刷新所有脏页
   RC rc = sync();
   if(rc != RC::SUCCESS) return rc;
 
   //TODO 删除描述表元数据的文件
+  const char* dir_meta = table_meta_file(dir, name()).c_str();
+  unlink(dir_meta); 
 
   //TODO 删除表数据文件
+  const char* dir_data = table_data_file(dir, name()).c_str();
+  unlink(dir_data); 
 
-  //TODO 清理所有的索引相关文件数据与索引元数据
+  // //TODO 清理所有的索引相关文件数据与索引元数据
+  // for(int i = 0;i < indexes_.size();i++) {
+  //   std::string dir_index = table_index_file(dir, name(), indexes_[i]->index_meta().name());
+    
+  // }
 
-  return RC::GENERIC_ERROR;
+  //TODO（由于有缓冲区的存在，还应删除）DiskBufferPool中的相关资源
+  data_buffer_pool_ = theGlobalDiskBufferPool();
+  data_buffer_pool_->close_file(file_id_); // 先close这个表对应的文件（指的是data file?）
+
+  // 以及handler?
+
+  return RC::SUCCESS;
 }
-
 
 
 RC Table::open(const char *meta_file, const char *base_dir)
@@ -352,13 +372,16 @@ RC Table::make_record(int value_num, const Value *values, char *&record_out)
   return RC::SUCCESS;
 }
 
+// 初始化这个Table的record_handler.
 RC Table::init_record_handler(const char *base_dir)
 {
+  // 取得表名
   std::string data_file = table_data_file(base_dir, table_meta_.name());
   if (nullptr == data_buffer_pool_) {
     data_buffer_pool_ = theGlobalDiskBufferPool();
   }
 
+  // 根据文件名打开一个分页文件，返回文file_id；
   int data_buffer_pool_file_id;
   RC rc = data_buffer_pool_->open_file(data_file.c_str(), &data_buffer_pool_file_id);
   if (rc != RC::SUCCESS) {
@@ -366,7 +389,7 @@ RC Table::init_record_handler(const char *base_dir)
     return rc;
   }
 
-  record_handler_ = new RecordFileHandler();
+  record_handler_ = new RecordFileHandler();// 创建新的record_handler，并且初始化。
   rc = record_handler_->init(data_buffer_pool_, data_buffer_pool_file_id);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to init record handler. rc=%d:%s", rc, strrc(rc));
@@ -814,12 +837,14 @@ IndexScanner *Table::find_index_for_scan(const ConditionFilter *filter)
 
 RC Table::sync()
 {
+  // bufferpool中的方法来sync所有页
   RC rc = data_buffer_pool_->purge_all_pages(file_id_);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to flush table's data pages. table=%s, rc=%d:%s", name(), rc, strrc(rc));
     return rc;
   }
 
+  // 还要sync index
   for (Index *index : indexes_) {
     rc = index->sync();
     if (rc != RC::SUCCESS) {

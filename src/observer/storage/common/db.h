@@ -48,7 +48,7 @@ private:
 
 private:
   std::string name_;
-  std::string path_;
+  std::string path_; // Db的路径
   std::unordered_map<std::string, Table *> opened_tables_;
 };
 

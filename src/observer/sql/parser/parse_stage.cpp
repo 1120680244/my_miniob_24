@@ -117,27 +117,29 @@ void ParseStage::callback_event(StageEvent *event, CallbackContext *context)
   return;
 }
 
+//（ParseStage的）handle_request，处理该阶段的event，处理完后 给ExecutionStage.
 StageEvent *ParseStage::handle_request(StageEvent *event)
 {
+  // 父类StageEvent的event被转换成这个阶段子类的SQLStageEvent.
   SQLStageEvent *sql_event = static_cast<SQLStageEvent *>(event);
-  const std::string &sql = sql_event->get_sql();
-
-  Query *result = query_create();
-  if (nullptr == result) {
-    LOG_ERROR("Failed to create query.");
-    return nullptr;
-  }
-
-  RC ret = parse(sql.c_str(), result);
-  if (ret != RC::SUCCESS) {
-    // set error information to event
+  const std::string &sql = sql_event->get_sql(); // 取得其SQL字符串
+                                                    // |
+  Query *result = query_create();                   // |
+  if (nullptr == result) {                          // |
+    LOG_ERROR("Failed to create query.");           // |
+    return nullptr;                                 // |
+  }                                                 // |
+                                                    // v
+  RC ret = parse(sql.c_str(), result); // SQL字符串被解析成Query结构体（即result）
+  if (ret != RC::SUCCESS) {                         // |
+    // set error information to event               // |
     const char *error = result->sstr.errors != nullptr ? result->sstr.errors : "Unknown error";
-    char response[256];
+    char response[256];                             // |
     snprintf(response, sizeof(response), "Failed to parse sql: %s, error msg: %s\n", sql.c_str(), error);
-    sql_event->session_event()->set_response(response);
-    query_destroy(result);
-    return nullptr;
-  }
-
-  return new ExecutionPlanEvent(sql_event, result);
+    sql_event->session_event()->set_response(response);//
+    query_destroy(result);                          // ————————————
+    return nullptr;                                 //             |
+  }                                                 //             |
+                                                    //             v
+  return new ExecutionPlanEvent(sql_event, result);//Query再送入下阶段（ExecutionEvent）
 }

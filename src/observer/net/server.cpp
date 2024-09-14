@@ -108,6 +108,7 @@ void Server::close_connection(ConnectionContext *client_context)
   delete client_context;
 }
 
+// recv(): server收到client的tcp连接发来的命令时，调用recv()函数来进行处理
 void Server::recv(int fd, short ev, void *arg)
 {
   ConnectionContext *client = (ConnectionContext *)arg;
@@ -207,6 +208,8 @@ int Server::send(ConnectionContext *client, const char *buf, int data_len)
   return 0;
 }
 
+// server接收client连接后，通过accept()函数来处理消息
+// @brief: accept(): 在libevent中加入一个新事件，用于监听来自这个client的所有请求。
 void Server::accept(int fd, short ev, void *arg)
 {
   Server *instance = (Server *)arg;
@@ -254,7 +257,7 @@ void Server::accept(int fd, short ev, void *arg)
   client_context->fd = client_fd;
   snprintf(client_context->addr, sizeof(client_context->addr), "%s", addr_str.c_str());
   pthread_mutex_init(&client_context->mutex, nullptr);
-
+  // 创建新的event.（用于监听client的消息）
   event_set(&client_context->read_event, client_context->fd, EV_READ | EV_PERSIST, recv, client_context);
 
   ret = event_base_set(instance->event_base_, &client_context->read_event);
@@ -275,7 +278,7 @@ void Server::accept(int fd, short ev, void *arg)
   }
 
   client_context->session = new Session(Session::default_session());
-  LOG_INFO("Accepted connection from %s\n", client_context->addr);
+  LOG_INFO("Accepted connection from %s\n", client_context->addr);//记上log（Accepted connection...）
 }
 
 int Server::start()
@@ -286,6 +289,8 @@ int Server::start()
     return start_tcp_server();
   }
 }
+
+
 int Server::start_tcp_server()
 {
   int ret = 0;
@@ -351,11 +356,12 @@ int Server::start_tcp_server()
   return 0;
 }
 
+// @brief: 进行unix连接到server，接受监听。
+// 使用libevent框架 将本地UNIX连接注册到epoll，然后监听该连接有无消息.
 int Server::start_unix_socket_server()
 {
-
-  int ret = 0;
-  server_socket_ = socket(PF_UNIX, SOCK_STREAM, 0);
+  int ret = 0; //(展示一些状态?)
+  server_socket_ = socket(PF_UNIX, SOCK_STREAM, 0); // 创建unix socket
   if (server_socket_ < 0) {
     LOG_ERROR("socket(): can not create unix socket: %s.", strerror(errno));
     return -1;
@@ -375,6 +381,7 @@ int Server::start_unix_socket_server()
   sockaddr.sun_family = PF_UNIX;
   snprintf(sockaddr.sun_path, sizeof(sockaddr.sun_path), "%s", server_param_.unix_socket_path.c_str());
 
+  // bind(): 将server_socket和特定的sockaddr_un相关联.
   ret = bind(server_socket_, (struct sockaddr *)&sockaddr, sizeof(sockaddr));
   if (ret < 0) {
     LOG_ERROR("bind(): can not bind server socket(path=%s), %s", sockaddr.sun_path, strerror(errno));
@@ -382,6 +389,7 @@ int Server::start_unix_socket_server()
     return -1;
   }
 
+  // listen(): 使得server_socket进入监听状态，准备接受client的connect请求.
   ret = listen(server_socket_, server_param_.max_connection_num);
   if (ret < 0) {
     LOG_ERROR("listen(): can not listen server socket, %s", strerror(errno));
@@ -390,13 +398,14 @@ int Server::start_unix_socket_server()
   }
   LOG_INFO("Listen on unix socket: %s", sockaddr.sun_path);
 
+  // 创建新的listen event.
   listen_ev_ = event_new(event_base_, server_socket_, EV_READ | EV_PERSIST, accept, this);
   if (listen_ev_ == nullptr) {
     LOG_ERROR("Failed to create listen event, %s.", strerror(errno));
     ::close(server_socket_);
     return -1;
   }
-
+  // 加入该新的listen event.
   ret = event_add(listen_ev_, nullptr);
   if (ret < 0) {
     LOG_ERROR("event_add(): can not add accept event into libevent, %s", strerror(errno));
@@ -422,8 +431,8 @@ int Server::serve()
     LOG_PANIC("Failed to start network");
     exit(-1);
   }
-
-  event_base_dispatch(event_base_);
+  // 在epoll_wait()中不断循环，用于接收来自obclient的连接请求。
+  event_base_dispatch(event_base_); // event派遣..（执行我给出的事件）
 
   return 0;
 }

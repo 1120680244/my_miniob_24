@@ -7,17 +7,14 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
-
 //
 // Created by Meiyi & Wangyunlai on 2021/5/12.
 //
-
 #ifndef __OBSERVER_STORAGE_COMMON_TABLE_META_H__
 #define __OBSERVER_STORAGE_COMMON_TABLE_META_H__
 
 #include <string>
 #include <vector>
-
 #include "rc.h"
 #include "storage/common/field_meta.h"
 #include "storage/common/index_meta.h"

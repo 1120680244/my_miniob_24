@@ -21,7 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "net/connection_context.h"
 #include "net/server_param.h"
 
-class Server {
+class Server {  // ob的服务端server，会监听client的内容。 
 public:
   Server(ServerParam input_server_param);
   ~Server();
@@ -44,7 +44,7 @@ private:
   int set_non_block(int fd);
   int start();
   int start_tcp_server();
-  int start_unix_socket_server();
+  int start_unix_socket_server(); //本地UNIX连接到epoll中，然后监听该连接有无消息？
 
 private:
   bool started_;

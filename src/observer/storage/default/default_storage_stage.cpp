@@ -138,6 +138,7 @@ void DefaultStorageStage::cleanup()
   LOG_TRACE("Exit");
 }
 
+// 处理DefaultStorageStage这个阶段的event
 void DefaultStorageStage::handle_event(StageEvent *event)
 {
   LOG_TRACE("Enter\n");
@@ -164,7 +165,7 @@ void DefaultStorageStage::handle_event(StageEvent *event)
   RC rc = RC::SUCCESS;
 
   char response[256];
-  switch (sql->flag) {
+  switch (sql->flag) { // 根据SQL的不同类型...
     case SCF_INSERT: {  // insert into
       const Inserts &inserts = sql->sstr.insertion;
       const char *table_name = inserts.relation_name;
@@ -201,14 +202,18 @@ void DefaultStorageStage::handle_event(StageEvent *event)
       snprintf(response, sizeof(response), "%s\n", rc == RC::SUCCESS ? "SUCCESS" : "FAILURE");
     } break;
 
-    case SCF_DROP_TABLE: {
-
+    case SCF_DROP_TABLE: { //  SCF_DROP_TABLE（SQL层次）
+          /* 在解析完的sql上，找到需要的信息，给入handler层次的drop_table() */
       // TODO: 拿到要 drop 的表
+      const DropTable &droptables = sql->sstr.drop_table;
+      const char *table_name = droptables.relation_name;
 
       // TODO: 调用drop_table接口，drop_table 要在 handler_ 中实现
+      rc = handler_->drop_table(current_db, table_name);
 
       // TODO: 返回结果，带不带换行符都可以
-
+      snprintf(response, sizeof(response), "%s\n", rc == RC::SUCCESS ? "SUCCESS" : "FAILURE");
+          // 在response这个char[]中写入，上述的操作的SUCCESS与否？
     }break;
 
     case SCF_CREATE_INDEX: {

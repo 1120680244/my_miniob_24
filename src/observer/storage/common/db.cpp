@@ -52,6 +52,7 @@ RC Db::init(const char *name, const char *dbpath)
   return open_all_tables();
 }
 
+// Db层次上的create_table..
 RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo *attributes)
 {
   RC rc = RC::SUCCESS;
@@ -76,16 +77,28 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfo 
   return RC::SUCCESS;
 }
 
+// Db层次上的drop_table..（Db层次的）
 RC Db::drop_table(const char* table_name)
 {
+  RC rc = RC::SUCCESS;
   //TODO 从表list(opened_tables_)中找出表指针
-
   //TODO 找不到表，要返回错误
+  Table * table = opened_tables_[table_name];
+  if (opened_tables_.count(table_name) != 0) {
+    LOG_WARN("%s was not a opened table!!", table_name);
+    return RC::SCHEMA_TABLE_EXIST;
+  }
 
   //TODO 调用 table->destroy 函数，让表自己销毁资源
+    // 要描述出该table的dir - Db的path_其实是base_dir！后面要用它描述出该table的具体路径（table_meta_）
+  const char* base_dir = path_.c_str();
+  rc = table->destroy(base_dir); // 给她传入base_dir比较好~
 
   //TODO 删除成功的话，从表list中将它删除
-
+  if(rc == RC::SUCCESS) {
+    opened_tables_.erase(table_name);
+    return RC::SUCCESS;
+  }
   return RC::GENERIC_ERROR;
 }
 

@@ -29,6 +29,7 @@ typedef struct {
   char *attribute_name;  // attribute name              属性名
 } RelAttr;
 
+//几类操作符
 typedef enum {
   EQUAL_TO,     //"="     0
   LESS_EQUAL,   //"<="    1
@@ -39,15 +40,16 @@ typedef enum {
   NO_OP
 } CompOp;
 
-//属性值类型
+// 属性的类型
 typedef enum { UNDEFINED, CHARS, INTS, FLOATS } AttrType;
 
-//属性值
+// 属性值 -> 类型+数据(pointer)
 typedef struct _Value {
   AttrType type;  // type of value
   void *data;     // value
 } Value;
 
+// 谓词条件 -> 左值/左属性 + 右值/右属性 + 是否是属性？
 typedef struct _Condition {
   int left_is_attr;    // TRUE if left-hand side is an attribute
                        // 1时，操作符左边是属性名，0时，是属性值
@@ -60,31 +62,36 @@ typedef struct _Condition {
   Value right_value;   // right-hand side value if right_is_attr = FALSE
 } Condition;
 
-// struct of select
+// struct of select（表示SELECT的结构体）-> 属性的组、表的组、条件的组
 typedef struct {
   size_t attr_num;                // Length of attrs in Select clause
-  RelAttr attributes[MAX_NUM];    // attrs in Select clause
+  RelAttr attributes[MAX_NUM];    // attrs in Select clause    （属性s）
+
   size_t relation_num;            // Length of relations in Fro clause
-  char *relations[MAX_NUM];       // relations in From clause
+  char *relations[MAX_NUM];       // relations in From clause  （表s）
+
   size_t condition_num;           // Length of conditions in Where clause
-  Condition conditions[MAX_NUM];  // conditions in Where clause
+  Condition conditions[MAX_NUM];  // conditions in Where clause（条件s）
 } Selects;
 
-// struct of insert
+// struct of insert（表示INSERT的结构体）-> 表 + 插入的值
 typedef struct {
   char *relation_name;    // Relation to insert into
   size_t value_num;       // Length of values
   Value values[MAX_NUM];  // values to insert
 } Inserts;
 
-// struct of delete
+// struct of delete（表示DELETE的结构体）-> 表 + 删除的条件
 typedef struct {
   char *relation_name;            // Relation to delete from
   size_t condition_num;           // Length of conditions in Where clause
   Condition conditions[MAX_NUM];  // conditions in Where clause
 } Deletes;
 
-// struct of update
+// struct of update（表示UPDATE的结构体）-> 表 + 更新的属性 + 更新的条件 + 更新后给的新值
+  // UPDATE table_1
+  // SET col_1 = ..., col_2 = ..., ...
+  // WHERE [conds]
 typedef struct {
   char *relation_name;            // Relation to update
   char *attribute_name;           // Attribute to update
@@ -93,45 +100,48 @@ typedef struct {
   Condition conditions[MAX_NUM];  // conditions in Where clause
 } Updates;
 
-typedef struct {
+typedef struct { //（属性的信息）
   char *name;     // Attribute name
   AttrType type;  // Type of attribute
   size_t length;  // Length of attribute
 } AttrInfo;
 
-// struct of craete_table
+// struct of create_table（CREATE TABLE的结构体）-> 表名 + 属性们
 typedef struct {
   char *relation_name;           // Relation name
   size_t attribute_count;        // Length of attribute
   AttrInfo attributes[MAX_NUM];  // attributes
 } CreateTable;
 
-// struct of drop_table
+// struct of drop_table  （DROP TABLE的结构体）-> 表名
 typedef struct {
   char *relation_name;  // Relation name
 } DropTable;
 
-// struct of create_index
+// struct of create_index（CREATE INDEX的结构体）-> 表名 + 索引名 + 所加的属性的名
 typedef struct {
   char *index_name;      // Index name
   char *relation_name;   // Relation name
   char *attribute_name;  // Attribute name
 } CreateIndex;
 
-// struct of  drop_index
+// struct of drop_index（DROP INDEX的结构体）-> 索引名
 typedef struct {
   const char *index_name;  // Index name
 } DropIndex;
 
+// struct of DescTable（DescTable的结构体）-> 表名
 typedef struct {
   const char *relation_name;
 } DescTable;
 
+// struct of LoadData（LoadData的结构体）-> 表名 + 所在文件的名
 typedef struct {
   const char *relation_name;
   const char *file_name;
 } LoadData;
-
+                         /* 上述，各自语句关键字的struct */
+// 一个Query的联合体：它具有潜在的各个关键字的"之一"(Union每次只使用其中一个member)
 union Queries {
   Selects selection;
   Inserts insertion;
@@ -167,6 +177,7 @@ enum SqlCommandFlag {
   SCF_HELP,
   SCF_EXIT
 };
+
 // struct of flag and sql_struct
 typedef struct Query {
   enum SqlCommandFlag flag;

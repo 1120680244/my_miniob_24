@@ -7,16 +7,13 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
-
-//
 // Created by Longda on 2021/4/13.
-//
 
 #ifndef __OBSERVER_SQL_PARSE_STAGE_H__
 #define __OBSERVER_SQL_PARSE_STAGE_H__
-
 #include "common/seda/stage.h"
 
+// ParseStage - parse阶段的结构体（是Stage的子类）
 class ParseStage : public common::Stage {
 public:
   ~ParseStage();
@@ -33,7 +30,7 @@ protected:
   void callback_event(common::StageEvent *event, common::CallbackContext *context);
 
 protected:
-  common::StageEvent *handle_request(common::StageEvent *event);
+  common::StageEvent *handle_request(common::StageEvent *event); // 处理这个stage的请求
 
 private:
   Stage *optimize_stage_ = nullptr;

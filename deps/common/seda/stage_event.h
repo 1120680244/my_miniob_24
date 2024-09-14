@@ -56,6 +56,11 @@ class TimeoutInfo;
  * </ul>
  */
 
+// 数据在不同的阶段中通过StageEvent类的形式传递.
+// 不同阶段是不同的子类：
+    //SessionStage;
+
+
 class StageEvent {
 
 public:

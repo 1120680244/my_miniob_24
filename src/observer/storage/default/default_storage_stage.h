@@ -7,19 +7,17 @@ THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
-
 //
 // Created by Meiyi & Longda on 2021/4/13.
 //
-
 #ifndef __OBSERVER_STORAGE_DEFAULT_STORAGE_STAGE_H__
 #define __OBSERVER_STORAGE_DEFAULT_STORAGE_STAGE_H__
-
 #include "common/seda/stage.h"
 #include "common/metrics/metrics.h"
 
 class DefaultHandler;
 
+// 这是最后的阶段：Stage的子类DefaultStorageStage.
 class DefaultStorageStage : public common::Stage {
 public:
   ~DefaultStorageStage();
@@ -32,7 +30,7 @@ protected:
 
   bool initialize() override;
   void cleanup() override;
-  void handle_event(common::StageEvent *event) override;
+  void handle_event(common::StageEvent *event) override; // 处理该阶段的event.
   void callback_event(common::StageEvent *event, common::CallbackContext *context) override;
 
 private:

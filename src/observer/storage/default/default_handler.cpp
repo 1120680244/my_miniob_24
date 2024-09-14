@@ -127,6 +127,7 @@ RC DefaultHandler::execute(const char *sql)
   return RC::GENERIC_ERROR;
 }
 
+// create table（Handler层次）
 RC DefaultHandler::create_table(
     const char *dbname, const char *relation_name, int attribute_count, const AttrInfo *attributes)
 {
@@ -134,16 +135,19 @@ RC DefaultHandler::create_table(
   if (db == nullptr) {
     return RC::SCHEMA_DB_NOT_OPENED;
   }
-  return db->create_table(relation_name, attribute_count, attributes);
+  return db->create_table(relation_name, attribute_count, attributes); // else
 }
 
+// drop table（Handler层次） - 可参照上面
 RC DefaultHandler::drop_table(const char *dbname, const char *relation_name)
 {
   //TODO 查找对应的数据库
-
+  Db *db = find_db(dbname);
   //TODO 如果数据库不存在返回错误，如果存在调用db的drop_table接口
-
-  return RC::GENERIC_ERROR;
+  if (db == nullptr) {
+    return RC::SCHEMA_DB_NOT_OPENED;
+  }
+  return db->drop_table(relation_name); // else（db的drop_table接口，要往深入再看）
 }
 
 RC DefaultHandler::create_index(

@@ -28,28 +28,29 @@ class IndexScanner;
 class RecordDeleter;
 class Trx;
 
-class Table {
+class Table {  // 数据库的表 的类
 public:
   Table();
   ~Table();
 
-  /**
-   * 创建一个表
+  /*** @brief：创建一个表
    * @param path 元数据保存的文件(完整路径)
    * @param name 表名
    * @param base_dir 表数据存放的路径
    * @param attribute_count 字段个数
-   * @param attributes 字段
-   */
+   * @param attributes 字段                                           */
   RC create(const char *path, const char *name, const char *base_dir, int attribute_count, const AttrInfo attributes[]);
 
-  /**
-   * 打开一个表
+  /*** @brief：打开一个表
    * @param meta_file 保存表元数据的文件完整路径
-   * @param base_dir 表所在的文件夹，表记录数据文件、索引数据文件存放位置
-   */
+   * @param base_dir 表所在的文件夹，表记录数据文件、索引数据文件存放位置 */
   RC open(const char *meta_file, const char *base_dir);
+
+  /*** @brief：销毁一个表（Table层）
+   * @param base_dir 表所在的文件夹，表记录数据文件、索引数据文件存放位置 */
   RC destroy(const char* dir);
+
+  /** 关于表上的record的操作 **/
   RC insert_record(Trx *trx, int value_num, const Value *values);
   RC update_record(Trx *trx, const char *attribute_name, const Value *value, int condition_num,
       const Condition conditions[], int *updated_count);
@@ -58,6 +59,7 @@ public:
   RC scan_record(Trx *trx, ConditionFilter *filter, int limit, void *context,
       void (*record_reader)(const char *data, void *context));
 
+  /** 关于表上index的操作 **/
   RC create_index(Trx *trx, const char *index_name, const char *attribute_name);
 
 public:
@@ -65,7 +67,7 @@ public:
 
   const TableMeta &table_meta() const;
 
-  RC sync();
+  RC sync(); // 即“同步”，刷新所有dirty pages.
 
 public:
   RC commit_insert(Trx *trx, const RID &rid);
@@ -101,7 +103,7 @@ private:
 private:
   std::string base_dir_;
   TableMeta table_meta_;
-  DiskBufferPool *data_buffer_pool_;  /// 数据文件关联的buffer pool
+  DiskBufferPool *data_buffer_pool_;  /// Table的data_file所关联的buffer pool
   int file_id_;
   RecordFileHandler *record_handler_;  /// 记录操作
   std::vector<Index *> indexes_;
