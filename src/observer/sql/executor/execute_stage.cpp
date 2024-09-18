@@ -116,11 +116,13 @@ void ExecuteStage::callback_event(StageEvent *event, CallbackContext *context)
   return;
 }
 
+// ***ExecuteStage阶段的处理请求函数
 void ExecuteStage::handle_request(common::StageEvent *event)
 {
+  // 转换成相应的event
   ExecutionPlanEvent *exe_event = static_cast<ExecutionPlanEvent *>(event);
   SessionEvent *session_event = exe_event->sql_event()->session_event();
-  Query *sql = exe_event->sqls();
+  Query *sql = exe_event->sqls(); // 取得其SQL
   const char *current_db = session_event->get_client()->session->get_current_db().c_str();
 
   CompletionCallback *cb = new (std::nothrow) CompletionCallback(this, nullptr);
@@ -129,11 +131,12 @@ void ExecuteStage::handle_request(common::StageEvent *event)
     exe_event->done_immediate();
     return;
   }
-  exe_event->push_callback(cb);
+  exe_event->push_callback(cb); // callback
 
-  switch (sql->flag) {
-    case SCF_SELECT: {  // select的SQL
-      do_select(current_db, sql, exe_event->sql_event()->session_event());
+  // 接下来是正式的执行ExecuteStage阶段。
+  switch (sql->flag) {  // sql的不同类型
+    case SCF_SELECT: {
+      do_select(current_db, sql, exe_event->sql_event()->session_event());// do_select
       exe_event->done_immediate();
     } break;
 
@@ -154,19 +157,21 @@ void ExecuteStage::handle_request(common::StageEvent *event)
         event->done_immediate();
         return;
       }
-
       default_storage_stage_->handle_event(storage_event);
     } break;
+
     case SCF_SYNC: {
       RC rc = DefaultHandler::get_default().sync();
       session_event->set_response(strrc(rc));
       exe_event->done_immediate();
     } break;
+
     case SCF_BEGIN: {
       session_event->get_client()->session->set_trx_multi_operation_mode(true);
       session_event->set_response(strrc(RC::SUCCESS));
       exe_event->done_immediate();
     } break;
+
     case SCF_COMMIT: {
       Trx *trx = session_event->get_client()->session->current_trx();
       RC rc = trx->commit();
@@ -174,6 +179,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       session_event->set_response(strrc(rc));
       exe_event->done_immediate();
     } break;
+
     case SCF_ROLLBACK: {
       Trx *trx = session_event->get_client()->session->current_trx();
       RC rc = trx->rollback();
@@ -181,6 +187,7 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       session_event->set_response(strrc(rc));
       exe_event->done_immediate();
     } break;
+
     case SCF_HELP: {
       const char *response = "show tables;\n"
                              "desc `table name`;\n"
@@ -193,12 +200,14 @@ void ExecuteStage::handle_request(common::StageEvent *event)
       session_event->set_response(response);
       exe_event->done_immediate();
     } break;
+
     case SCF_EXIT: {
       // do nothing
       const char *response = "Unsupported\n";
       session_event->set_response(response);
       exe_event->done_immediate();
     } break;
+    
     default: {
       exe_event->done_immediate();
       LOG_ERROR("Unsupported command=%d\n", sql->flag);
