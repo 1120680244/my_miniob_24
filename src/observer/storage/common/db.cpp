@@ -83,11 +83,11 @@ RC Db::drop_table(const char* table_name)
   RC rc = RC::SUCCESS;
   //TODO 从表list(opened_tables_)中找出表指针
   //TODO 找不到表，要返回错误
-  if (opened_tables_.count(table_name) != 0) {
+  if (opened_tables_.count(table_name) == 0) {
     LOG_WARN("%s was not a opened table!!", table_name);
-    return RC::SCHEMA_TABLE_EXIST;
+    return RC::SCHEMA_DB_NOT_EXIST;
   }
-  Table * table = opened_tables_[table_name];
+  Table *table = opened_tables_[table_name];
 
   //TODO 调用 table->destroy 函数，让表自己销毁资源
     // 要描述出该table的dir - Db的path_其实是base_dir！后面要用它描述出该table的具体路径（table_meta_）

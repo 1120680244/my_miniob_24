@@ -135,16 +135,20 @@ RC Table::destroy(const char* dir) {
 
   //TODO 删除描述表元数据的文件
   const char* dir_meta = table_meta_file(dir, name()).c_str();
-  remove(dir_meta);
+  // remove(dir_meta);
+  unlink(dir_meta);
 
   //TODO 删除表数据文件
   const char* dir_data = table_data_file(dir, name()).c_str();
-  remove(dir_data);
+  // remove(dir_data);
+  unlink(dir_data);
+
 
   //TODO 清理所有的索引相关文件数据与索引元数据
   for(int i = 0;i < indexes_.size();i++) {
     std::string dir_index = table_index_file(dir, name(), indexes_[i]->index_meta().name());
-    remove(dir_index.c_str());
+    // remove(dir_index.c_str());
+    unlink(dir_index.c_str());
   }
 
   //TODO（由于有缓冲区的存在，还应删除）DiskBufferPool中的相关资源
